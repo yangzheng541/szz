@@ -37,7 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'szz_app'
+
+    'szz_app',
+
+    'rest_framework',
+    'django_filters',
+    'rest_framework_swagger',
+    'rest_framework_simplejwt'
 ]
 
 MIDDLEWARE = [
@@ -129,3 +135,25 @@ MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 # 配置浏览器访问文件的地址：http://127.0.0.1:8000/media/...
 MEDIA_URL = '/media/'
 # 以上表示浏览器传来的url以media开头的，django统一到MEDIA_ROOT配置的目录下去找
+
+# 配置AUTH验证后跳转到的URL
+# LOGIN_URL = '/api/auth/auth_error'
+
+import datetime
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+}
+SIMPLE_JWT = {
+    # token有效时长(返回的 access 有效时长)
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),
+    # token刷新的有效时间(返回的 refresh 有效时长)
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=20),
+}
