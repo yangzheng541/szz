@@ -43,7 +43,7 @@ class TakePoint(models.Model):
     order = models.IntegerField()  # 论点的次序
     point = models.CharField(max_length=255)  # 只能以文字形式
     data = models.TextField()  # 可通过富文本形式（存储为富文本）
-    answer = models.ForeignKey('Answer', on_delete=models.CASCADE)
+    answer = models.ForeignKey('Answer', on_delete=models.CASCADE, related_name='takepoint')
 
 
 class Questionnaire(models.Model):

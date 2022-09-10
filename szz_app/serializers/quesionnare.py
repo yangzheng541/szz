@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from drf_writable_nested import WritableNestedModelSerializer
 from szz_app.models import Questionnaire, Topic, Option
-from .user import UserInfoBasicSerializer, UserBasicSerializer
+from .user import UserBasicSerializer
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -71,7 +71,7 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
 
 class QuestionnaireSerializer(serializers.ModelSerializer):
     topics = TopicSerializer(many=True, required=True)
-    user = UserBasicSerializer()
+    user = UserBasicSerializer(read_only=True)
 
     class Meta:
         model = Questionnaire
