@@ -2,6 +2,7 @@ from rest_framework import serializers
 from drf_writable_nested import WritableNestedModelSerializer
 from szz_app.models import Questionnaire, Topic, Option
 from .user import UserBasicSerializer
+from szz_app.util import check_objs_order, check_objs_no_empty
 
 
 class OptionSerializer(serializers.ModelSerializer):
@@ -27,6 +28,7 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
     def validate(self, data):
         topics = data['topics']
         self.check_topics(topics)
+        self.force_default(data)
         return data
 
     def type2chr(self, type):
@@ -37,21 +39,11 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
             return topic_type[type]
 
     def check_topics(self, topics):
-        check_result = len(topics) != 0
-        self.check_objs_order(topics)  # 保证题目有序
+        check_objs_no_empty(topics, 'topics')  # 保证题目组的长度至少为1
+        check_objs_order(topics)  # 保证题目有序
         for topic in topics:
             self.check_topic_type(topic)  # 保证题目类型符合条件
-            self.check_objs_order(topic.get('options'), 'label')  # 保证选项有序
-        return check_result
-
-    def check_objs_order(self, objs, order_name='order'):
-        orders = []
-        if objs is None:
-            return False
-        for obj in objs:
-            orders.append(obj[order_name])
-        if len(set(orders)) != len(orders):
-            raise serializers.ValidationError('存在描述为' + order_name + '的对象组中在无重复下不能明确的排序')
+            check_objs_order(topic.get('options'), 'label')  # 保证选项有序
 
     def check_topic_type(self, topic):
         type_chr = self.type2chr(topic['type'])
@@ -67,6 +59,9 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
                 raise serializers.ValidationError(topic['title'] + '为选择题，但其options为非空')
             if topic['description'].strip() == '':
                 raise serializers.ValidationError(topic['title'] + '为文本题，但其desciption为空字符串')
+
+    def force_default(self, data):
+        data['state'] = 0
 
 
 class QuestionnaireSerializer(serializers.ModelSerializer):
