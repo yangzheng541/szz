@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_writable_nested import WritableNestedModelSerializer
-from szz_app.models import Questionnaire, Topic, Option
+from szz_app.models import Questionnaire, Topic, Option, Question
 from .user import UserBasicSerializer
 from szz_app.util import check_objs_order, check_objs_no_empty
 
@@ -15,19 +15,28 @@ class TopicSerializer(WritableNestedModelSerializer):
     options = OptionSerializer(many=True, required=False)
     class Meta:
         model = Topic
-        fields = ('title', 'order', 'description', 'type', 'options')
+        fields = ('title', 'order', 'description', 'type', 'options', 'required')
 
 
-class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
+class QuestionnaireBaseSerializer(WritableNestedModelSerializer):
     topics = TopicSerializer(many=True, required=True)
+
 
     class Meta:
         model = Questionnaire
-        fields = ('title', 'description', 'user', 'topics')
+        exclude = ('create_time', )
+
+
+class QuestionnaireReadSerializer(QuestionnaireBaseSerializer):
+    user = UserBasicSerializer(read_only=True)
+
+
+class QuestionnaireWriteSerializer(QuestionnaireBaseSerializer):
+    questions = serializers.PrimaryKeyRelatedField(queryset=Question.objects.all(), many=True, required=False)
 
     def validate(self, data):
-        topics = data['topics']
-        self.check_topics(topics)
+        self.check_topics(data['topics'])
+        self.check_time(data['end_time'])
         self.force_default(data)
         return data
 
@@ -45,6 +54,11 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
             self.check_topic_type(topic)  # 保证题目类型符合条件
             check_objs_order(topic.get('options'), 'label')  # 保证选项有序
 
+    def check_time(self, end_time):
+        print(end_time)
+        if time.time() >= end_time:
+            raise serializers.ValidationError('问卷起始时间小于终止时间')
+
     def check_topic_type(self, topic):
         type_chr = self.type2chr(topic['type'])
         if type_chr is None:  # 非有效类型
@@ -61,13 +75,17 @@ class QuestionnaireWriteSerializer(WritableNestedModelSerializer):
                 raise serializers.ValidationError(topic['title'] + '为文本题，但其desciption为空字符串')
 
     def force_default(self, data):
+        data['user'] = self.context['request'].user
+        data['fill_count'] = 0
+
+
+class QuestionnaireCreateSerializer(QuestionnaireWriteSerializer):
+    def force_default(self, data):
+        super().force_default(data)
         data['state'] = 0
 
 
-class QuestionnaireSerializer(serializers.ModelSerializer):
-    topics = TopicSerializer(many=True, required=True)
-    user = UserBasicSerializer(read_only=True)
-
-    class Meta:
-        model = Questionnaire
-        fields = ('title', 'description', 'user', 'topics')
+class QuestionnaireUpdateSerializer(QuestionnaireWriteSerializer):
+    def force_default(self, data):
+        super().force_default(data)
+        data

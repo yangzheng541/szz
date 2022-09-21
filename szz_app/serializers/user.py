@@ -17,3 +17,9 @@ class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('username', 'userinfo')
+
+
+class FansSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserInfo
+        field = ('username', 'userinfo')
