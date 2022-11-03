@@ -1,22 +1,31 @@
-from rest_framework import generics, response, views, status
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from szz_app.util import IsOwnerOrReadOnly, BasicPagination
 from szz_app.models import Question
-from szz_app.serializers import QuestionSerializer, QuestionWriteSerializer
+from szz_app.serializers import QuestionReadSerializer, QuestionReadALLSerializer, QuestionCreateSerializer, QuestionUpdateSerializer
 
 
-class QuestionList(views.APIView):
-    def get(self, request, format=None):
-        question = Question.objects.all()
-        serializer = QuestionSerializer(question, many=True)
-        return response.Response(serializer.data)
+class QuestionList(generics.ListCreateAPIView):
+    queryset = Question.objects.all()
+    pagination_class = BasicPagination
+    permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, format=None):
-        serializer = QuestionWriteSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return response.Response(serializer.data, status=status.HTTP_201_CREATED)
-        return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return QuestionReadALLSerializer
+        elif self.request.method == 'POST':
+            return QuestionCreateSerializer
+        return None
 
 
 class QuestionDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset = Question.objects.all()
-    serializer_class = QuestionWriteSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    filter_backends = ()
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return QuestionReadSerializer
+        elif self.request.method == 'POST':
+            return QuestionUpdateSerializer
+        return None

@@ -1,19 +1,20 @@
 from rest_framework import serializers
-from szz_app.models import Question, Questionnaire
+from drf_writable_nested import WritableNestedModelSerializer
+from szz_app.models import Question, Questionnaire, Answer
 from .user import UserBasicSerializer
-from .quesionnare import QuestionnaireReadSerializer
-from szz_app.util import check_obj
+from .quesionnaire import QuestionnaireReadSerializer
+from szz_app.util import check_obj, del_key_value_s
 
 
 # 编写纪录一：多对多字段在写中不会显露（'__all__'情况下）
 # 编写纪录二：当存在展示时可以关联列出来（user的相关字段），但是不可写入（只可写入id），可分为两个序列化器写
+# 编写纪录三：model中的自定义属性需要显式引用才可使用（'__all__'不行）
 
 
-class QuestionBaseSerializer(serializers.ModelSerializer):
+class QuestionBaseSerializer(WritableNestedModelSerializer):
     class Meta:
         model = Question
-        fields = ('title', 'description', 'look_count', 'share_count', 'user', 'create_time', 'type', 'state',
-                  'questionnaires')
+        fields = '__all__'
 
     def validate(self, data):
         self.force_default(data)
@@ -23,9 +24,21 @@ class QuestionBaseSerializer(serializers.ModelSerializer):
         pass
 
 
+class QuestionReadALLSerializer(QuestionBaseSerializer):
+    class Meta:
+        model = Question
+        fields = ('id', 'title', 'description', 'look_count', 'share_count', 'create_time', 'type', 'state',
+                  'questionnaires_len', 'answers_abouts')
+
+
 class QuestionReadSerializer(QuestionBaseSerializer):
     user = UserBasicSerializer(read_only=True)
     questionnaires = QuestionnaireReadSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = Question
+        fields = ('id', 'title', 'description', 'look_count', 'share_count', 'create_time', 'type', 'state',
+                  'questionnaires', 'user')
 
 
 class QuestionWriteSerializer(QuestionBaseSerializer):
@@ -46,8 +59,8 @@ class QuestionCreateSerializer(QuestionWriteSerializer):
 
 
 class QuestionUpdateSerializer(QuestionWriteSerializer):
-    class Meta:
-        model = Question
-        fields = ('title', 'description', 'user', 'create_time', 'type', 'state',
-                  'questionnaires')
+    def force_default(self, data):
+        super().force_default(data)
+        del_key = ['state', 'look_count', 'share_count']
+        del_key_value_s(data, del_key)
         # 去除look_count、share_count两属性，不能通过更新修改这两个字段

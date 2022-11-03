@@ -1,25 +1,31 @@
 from rest_framework import serializers
+from drf_writable_nested import WritableNestedModelSerializer
 from szz_app.models import UserInfo, User
 
 
-class UserInfoBasicSerializer(serializers.ModelSerializer):
-    avatar = serializers.ImageField(read_only=True)
-    sex = serializers.BooleanField(read_only=True)
-    birth = serializers.DateTimeField(read_only=True)
+class UserInfoBasicSerializer(WritableNestedModelSerializer):
     class Meta:
         model = UserInfo
-        fields = ('avatar', 'sex', 'birth')
+        fields = ('avatar', )
 
 
-class UserBasicSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(read_only=True)
+class UserBasicSerializer(WritableNestedModelSerializer):
     userinfo = UserInfoBasicSerializer()
     class Meta:
         model = User
         fields = ('username', 'userinfo')
 
 
-class FansSerializer(serializers.ModelSerializer):
+class UserInfoPageSerializer(WritableNestedModelSerializer):
     class Meta:
         model = UserInfo
-        field = ('username', 'userinfo')
+        fields = ('id', 'avatar', 'sex', 'birth', 'job', 'address', 'phone',
+                  'fans_count', 'attentions_count', 'questions_count', 'answers_count')
+
+
+class UserPageSerializer(WritableNestedModelSerializer):
+    userinfo = UserInfoPageSerializer()
+    class Meta:
+        model = User
+        fields = ('username', 'userinfo', 'email')
+
