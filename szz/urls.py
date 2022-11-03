@@ -19,13 +19,15 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.static import serve
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from szz_app.views.auth import User
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('szz_app.urls')),
     re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
-    path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('verify/', TokenVerifyView.as_view(), name='token_verify')
+    path('login', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('refresh', TokenRefreshView.as_view(), name='token_refresh'),
+    path('verify', TokenVerifyView.as_view(), name='token_verify'),
+    path('register', User.as_view(), name='user_register')
 ]

@@ -25,12 +25,13 @@ SECRET_KEY = 'django-insecure-_gaclv1l4g!-e+-=xjc)w)hexnz4xsk=pr5*!y*q_k5-4qsa^l
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -47,14 +48,17 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 ROOT_URLCONF = 'szz.urls'
 
@@ -112,11 +116,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Shanghai'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -147,13 +151,16 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+    # 'DEFAULT_FILTER_BACKENDS': (
+    #     'rest_framework.filters.OrderingFilter'
+    # )
 }
 SIMPLE_JWT = {
     # token有效时长(返回的 access 有效时长)
-    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=30),
     # token刷新的有效时间(返回的 refresh 有效时长)
     'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=20),
 }
