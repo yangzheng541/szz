@@ -45,3 +45,8 @@ class TopicType(models.IntegerChoices):
     REDIO = 0, '单选题'
     CHECKBOX = 1, '多选题'
     TEXT = 2, '文本题'
+
+class JobType(models.IntegerChoices):
+    REDIO = 0, 'IT行业工作者'
+    CHECKBOX = 1, '公务员'
+    TEXT = 2, '教师'

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_writable_nested import WritableNestedModelSerializer
-from szz_app.models import Answer, TakePoint, Evidence
+from szz_app.models import Answer, TakePoint, Evidence, User
 from .user import UserBasicSerializer
 from szz_app.util import check_objs_order, check_objs_no_empty, del_key_value_s
 
@@ -26,13 +26,14 @@ class TakePointSerializer(WritableNestedModelSerializer):
 class AnswerBasicSerializer(WritableNestedModelSerializer):
     class Meta:
         model = Answer
-        fields = ('body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time', 'state')
+        fields = ('id', 'body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time', 'state')
 
     def force_default(self, data):
         pass
 
 
 class AnswerWriteSerializer(AnswerBasicSerializer):
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     takepoints = TakePointSerializer(many=True, required=False)
     class Meta:
         model = Answer
@@ -40,7 +41,6 @@ class AnswerWriteSerializer(AnswerBasicSerializer):
 
     def validate(self, data):
         check_objs_order(data.get('takepoints'))
-        check_objs_no_empty(data.get('takepoints'), 'takepoints')
         self.force_default(data)
         return data
 
@@ -52,7 +52,8 @@ class AnswerReadAllSerializer(AnswerBasicSerializer):
     user = UserBasicSerializer(read_only=True)
     class Meta:
         model = Answer
-        fields = ('body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time', 'state', 'question_title')
+        fields = ('id', 'body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time', 'state',
+                  'question_title', 'point_num', 'evidence_num')
 
 
 class AnswerReadSerializer(AnswerBasicSerializer):
@@ -60,11 +61,12 @@ class AnswerReadSerializer(AnswerBasicSerializer):
     user = UserBasicSerializer(read_only=True)
     class Meta:
         model = Answer
-        fields = ('takepoints', 'body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time','state')
+        fields = ('id', 'takepoints', 'body', 'agree_count', 'look_count', 'share_count', 'cover', 'user', 'create_time','state')
 
 
 class AnswerCreateSerializer(AnswerWriteSerializer):
     def force_default(self, data):
+        super().force_default(data)
         data['agree_count'] = 0
         data['look_count'] = 0
         data['share_count'] = 0

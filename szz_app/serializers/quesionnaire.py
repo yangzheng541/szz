@@ -19,7 +19,7 @@ class TopicSerializer(WritableNestedModelSerializer):
     options = OptionSerializer(many=True, required=False)
     class Meta:
         model = Topic
-        fields = ('id', 'title', 'order', 'description', 'type', 'options', 'required')
+        fields = ('id', 'title', 'order', 'description', 'type', 'options', 'required', 'has_other', 'max_select')
 
 
 class QuestionnaireBaseSerializer(WritableNestedModelSerializer):
@@ -67,11 +67,21 @@ class QuestionnaireWriteSerializer(QuestionnaireBaseSerializer):
                 raise serializers.ValidationError(topic['title'] + '为选择题，但其options为空')
             if len(topic['options']) < 2:
                 raise serializers.ValidationError(topic['title'] + '为选择题，但其options的长度小于2')
+            # ---- 多选
+            self.check_muti_type(topic)
         elif topic['type'] in [TopicType.TEXT]:
-            if topic.get('options') is not None:
+            if topic.get('options') is not None and len(topic.get('options')) != 0:
                 raise serializers.ValidationError(topic['title'] + '为选择题，但其options为非空')
             if topic['description'].strip() == '':
                 raise serializers.ValidationError(topic['title'] + '为文本题，但其desciption为空字符串')
+
+    def check_muti_type(self, topic):
+        if topic['type'] == TopicType.CHECKBOX:
+            if topic.get('has_other') is None or topic.get('max_select') is None:
+                raise serializers.ValidationError(topic['title'] + '为多选题，但最多选择或其他项为空')
+        else:
+            if topic.get('max_select') is not None or topic.get('max_select') is not None:
+                raise serializers.ValidationError(topic['title'] + '为单选题，但最多选择或其他项为非空')
 
     def force_default(self, data):
         data['user'] = self.context['request'].user
@@ -92,3 +102,9 @@ class QuestionnaireUpdateSerializer(QuestionnaireWriteSerializer):
         super().force_default(data)
         del_keys = ['create_time', 'fill_count', 'share_count', 'recommend_count', 'state']
         del_key_value_s(data, del_keys)
+
+
+class QuestionnaireResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Questionnaire
+        fields = ('its_result', )

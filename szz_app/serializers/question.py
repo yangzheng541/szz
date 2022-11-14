@@ -50,12 +50,21 @@ class QuestionWriteSerializer(QuestionBaseSerializer):
 
 
 class QuestionCreateSerializer(QuestionWriteSerializer):
+    def create(self, validated_data):
+        questionnaires = None
+        if validated_data.get('questionnaires') is not None:
+            questionnaires = validated_data.pop('questionnaires')
+        question = super().create(validated_data)
+        if questionnaires is not None:
+            question.questionnaires.set(questionnaires)
+            question.save()
+        return question
+
     def force_default(self, data):
         super().force_default(data)
         data['state'] = 0
         data['look_count'] = 0
-        data['share_count'] = 0
-        # 初始化时默认状态为0，两个数均初始化为0
+        data['share_count'] = 0  # 初始化时默认状态为0，两个数均初始化为0
 
 
 class QuestionUpdateSerializer(QuestionWriteSerializer):
