@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 from szz_app.serializers import UserPageSerializer
 from szz_app.models import User
-from szz_app.util import UserSelf
+from szz_app.util import UserSelf, decode_image
 
 class UserPageList(generics.RetrieveAPIView):
     queryset = User

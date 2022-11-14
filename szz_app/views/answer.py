@@ -31,6 +31,6 @@ class AnswerQuestionPageList(generics.ListAPIView):
     pagination_class = BasicPagination
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, question_id, format=None):
-        answers = Answer.objects.filter()
-        serializer = AnswerReadSerializer(answers, many=True)
+        answers = Answer.objects.filter(question_id=question_id)
+        serializer = AnswerReadAllSerializer(answers, many=True)
         return response.Response(serializer.data)

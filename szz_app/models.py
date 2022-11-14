@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from szz_app.util import QuestionnaireType, StateType, QuestionType, PlatformType, TopicType
+from django.db.models import Count
+from szz_app.util import QuestionnaireType, StateType, QuestionType, PlatformType, TopicType, JobType
 import datetime
 
 # Create your models here.
@@ -15,7 +16,7 @@ class UserInfo(models.Model):
     avatar = models.ImageField(upload_to='avatar', default='', verbose_name='头像')
     sex = models.BooleanField(null=True)
     birth = models.DateField(null=True)
-    job = models.IntegerField(null=True)
+    job = models.IntegerField(null=True, choices=JobType.choices)
     address = models.CharField(null=True, max_length=128, default='')
     phone = models.CharField(null=True, max_length=16, default='')
     fans = models.ManyToManyField('UserInfo', related_name='attentions')  # 关注-粉丝是多对多表
@@ -36,6 +37,14 @@ class UserInfo(models.Model):
     def answers_count(self):
         return self.user.answers.count()
 
+    @property
+    def questionnaire_count(self):
+        return self.user.questionnaires.count()
+
+    @property
+    def fill_questionnaire_count(self):
+        return self.user.results.count()
+
 
 class Question(models.Model):
     # 问题模型（区分问卷模型）
@@ -43,12 +52,12 @@ class Question(models.Model):
     description = models.TextField(null=True, default='', blank=True)
     look_count = models.IntegerField(null=True, default=0)  # 查看数（在获取问题api中，每获取一次问题数据时，令此项加一）
     share_count = models.IntegerField(null=True, default=0)  # 分享数（应有一专门api增长分享数）
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='questions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='questions', blank=True)
     create_time = models.DateTimeField(auto_now_add=True)
     type = models.IntegerField(null=True, default=QuestionType.DEFAULT, choices=QuestionType.choices)
     state = models.IntegerField(null=True, default=StateType.DEFAULT, choices=StateType.choices)
     cover = models.ImageField(upload_to='cover', verbose_name='问题封面', null=True)
-    questionnaires = models.ManyToManyField('Question', related_name='questions')
+    questionnaires = models.ManyToManyField('Questionnaire', related_name='questions')
 
     @property
     def questionnaires_len(self):
@@ -84,6 +93,18 @@ class Answer(models.Model):
     @property
     def question_title(self):
         return self.question.title
+    
+    @property
+    def point_num(self):
+        return len(self.takepoints.all())
+    
+    @property
+    def evidence_num(self):
+        takepoints = self.takepoints.all()
+        point_num = 0
+        for takepoint in takepoints:
+            point_num += len(takepoints.all())
+        return point_num
 
 
 class TakePoint(models.Model):
@@ -104,7 +125,7 @@ class Questionnaire(models.Model):
     # 问卷模型（问卷和问题是多对多的关系）
     title = models.CharField(max_length=255)
     description = models.TextField(null=True, default='')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='questionnaires')
     create_time = models.DateTimeField(null=True)
     end_time = models.DateTimeField(null=True)
     state = models.IntegerField(null=True, default=StateType.DEFAULT, choices=StateType.choices)  # 0正常 | 1匿名问卷 | 2逻辑删除
@@ -117,15 +138,51 @@ class Questionnaire(models.Model):
     platform_type = models.IntegerField(null=True, default=PlatformType.DEFAULT, choices=PlatformType.choices)
     platform_url = models.TextField(null=True)
 
+    @property
+    def its_result(self):
+        results = []
+        topics = self.topics.all()
+        for t in topics:
+            trs = t.topic_result.all()
+            result = {
+                'type': t.type,
+                'data': {},
+                'total': 0,
+                'title': t.title
+            }
+            for tr in trs:
+                options = t.options.order_by('label').all()
+                if t.type == 0:
+                    index = tr.option_type_result.first().answer
+                    self.result_add1(result, options[index].content)
+                elif t.type == 1:
+                    answers = tr.option_type_result.all()
+                    for answer in answers:
+                        self.result_add1(result, options[answer.answer].content)
+                    # ------ 没有写其他选项的功能
+                else:
+                    self.result_add1(result, tr.text_type_result.answer)
+            results.append(result)
+        return results
+
+    def result_add1(self, result, answer):
+        if result['data'].__contains__(answer):
+            result['data'][answer] += 1
+        else:
+            result['data'][answer] = 1
+        result['total'] += 1
+
 
 class Topic(models.Model):
     # 题目模型（与问卷模型是多对一关系）
     title = models.CharField(max_length=255)
     order = models.IntegerField()  # 题目的次序
     required = models.BooleanField()  # 必答题和选答题
-    description = models.TextField(null=True, default='')
+    description = models.TextField(null=True, default='', blank=True)
     type = models.IntegerField(choices=TopicType.choices)  # 单选题、多选题、文本题（基本题型）
     questionare = models.ForeignKey('Questionnaire', on_delete=models.CASCADE, related_name='topics')
+    has_other = models.BooleanField(null=True, blank=True) # 专属于多选题 --是否有其他选项
+    max_select = models.IntegerField(null=True, blank=True) # 专属于多选题 --最多选择几项
 
 
 class Option(models.Model):
@@ -153,11 +210,16 @@ class TopicResult(models.Model):
 
 class TextTypeResult(models.Model):
     # 文本类型的结果
-    answer = models.TextField()
+    answer = models.TextField(null=True, blank=True)
     topic_result = models.OneToOneField('TopicResult', on_delete=models.CASCADE, related_name='text_type_result')
 
 
 class OptionTypeResult(models.Model):
     # 文本题结果模型（与结果模型多对一）
-    answer = models.IntegerField()
-    topic_result = models.OneToOneField('TopicResult', on_delete=models.CASCADE, related_name='option_type_result')
+    answer = models.IntegerField(null=True, blank=True)
+    topic_result = models.ForeignKey('TopicResult', on_delete=models.CASCADE, related_name='option_type_result')
+
+
+class Picture(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pictures', blank=True)
+    picture = models.ImageField(upload_to='picture', verbose_name='任意图片', null=True)

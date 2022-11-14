@@ -17,8 +17,15 @@ urlpatterns = [
     path('userPage/<int:pk>', views.UserPageList.as_view()),
     path('userDetail/<int:pk>', views.UserDetail.as_view()),
     path('user', views.User.as_view()),
+    path('result_user', views.ResultUserPage.as_view()),
 
-    path('result', views.ResultList.as_view())
+    path('result', views.ResultList.as_view()),
+    path('result/<int:pk>', views.ResultDetail.as_view()),
+    path('questionnaires_result/<int:pk>', views.QuestionnaireResult.as_view()),
+
+    path('picture', views.PictureList.as_view()),
+
+    path('password/<int:pk>', views.PasswordDetail.as_view())
     # path('question/<int:question_pk>/questionnaire', views.QuestionBindNairesList.as_view()),
     # path('question/<int:question_pk>/questionnaire/<int:questionnaire_pk>', views.QuestionBindNaireDetail.as_view())
 ]
